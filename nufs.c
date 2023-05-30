@@ -112,16 +112,14 @@ int nufs_mkdir(const char *path, mode_t mode) {
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
   char *from_parent = malloc(strlen(path) + 1);
-  char *name = malloc(strlen(path) + 1);
-  split_path(path, from_parent, name);
+  split_path(path, from_parent, NULL);
   int parent_inum = tree_lookup(from_parent);
   
   free(from_parent);
-  free(name);
 
   if (rv >= 0) {
-    directory_put(node, ".", parent_inum);
-    directory_put(node, "..", inum);
+    directory_put(node, ".", inum);
+    directory_put(node, "..", parent_inum);
   }
   printf("making dir\n");
 

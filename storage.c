@@ -278,11 +278,11 @@ void split_path(const char *path, char *directory, char *name) {
   // add null terminator at end of parent
   if (counter != strlen(path) - 1) {
     directory[strlen(path) - counter - 1] = '\0';
-    strcpy(name, &directory[strlen(path) - counter]);
+    if (name) strcpy(name, &directory[strlen(path) - counter]);
   }
   // no parent directory, add null terminator
   else {
     directory[1] = '\0';
-    strcpy(name, &path[1]);
+    if (name) strcpy(name, &path[1]);
   }
 }
