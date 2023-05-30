@@ -41,7 +41,7 @@ int nufs_access(const char *path, int mask) {
 // Implementation for: man 2 stat
 // This is a crucial function.
 int nufs_getattr(const char *path, struct stat *st) {
-  int rv = storage_stat(path, st);
+  int rv = storage_stat(path, -1, st);
 
   if (rv < 0) {
     return -ENOENT;
@@ -55,25 +55,26 @@ int nufs_getattr(const char *path, struct stat *st) {
 // lists the contents of a directory
 int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                  off_t offset, struct fuse_file_info *fi) {
-  char item_path[128];
-  struct dirent *dir_entry;
-  (void)offset;
-  (void)fi;
   int rv = 0;
+  dirent_node_t *items = storage_list(path, -1);
+  int flag = 0;
 
-  slist_t *items = storage_list(path, -1);
-
-  for (slist_t *xs = items; xs != 0; xs = xs->next) {
+  for (dirent_node_t *xs = items; xs != 0;) {
     struct stat st;
-    printf("current item: %s\n", xs->data);
-    strcpy(item_path, path);
-    strcat(item_path, "/");
-    strcat(item_path, xs->data);
+    printf("current item: %s\n", xs->entry.name);
 
-    rv = storage_stat(item_path, &st);
+    rv = storage_stat(NULL, xs->entry.inum, &st);
     assert(rv == 0);
-    filler(buf, xs->data, &st, 0);
-    memset(item_path, 0, sizeof(char[128]));
+    filler(buf, xs->entry.name, &st, 0);
+
+    dirent_node_t *to_del = xs;
+    xs = to_struct((list_next(&xs->dirent_list)), dirent_node_t, dirent_list);
+    list_del(&to_del->dirent_list);
+    free(to_del);
+
+    if (to_del == xs) {
+      break;
+    }
   }
 
   // filler(buf, "hello.txt", &st, 0);

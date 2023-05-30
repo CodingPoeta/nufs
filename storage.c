@@ -9,9 +9,9 @@ void storage_init(const char *path) {
 }
 
 // get objects stats, returns something other than zero if it doesn't work
-int storage_stat(const char *path, struct stat *st) {
+int storage_stat(const char *path, int inum, struct stat *st) {
   // get inum and make sure its valid
-  int inum = tree_lookup(path);
+  if(path) inum = tree_lookup(path);
 
   if (inum < 0) {
     return -1;
@@ -264,7 +264,7 @@ int storage_rename(const char *from, const char *to) {
 }
 
 // list objects at path
-slist_t *storage_list(const char *path, int inum) {
+dirent_node_t *storage_list(const char *path, int inum) {
   printf("listing\n");
   return directory_list(path, inum);
 }

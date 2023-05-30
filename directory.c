@@ -85,19 +85,25 @@ int directory_delete(inode_t* dd, const char* name) {
   return -1;
 }
 
-// gets an slist_t struct of each file name at the end of the passed in path
-slist_t* directory_list(const char* path, int inum) {
+// gets an dirent_node struct of each file name at the end of the passed in path
+dirent_node_t *directory_list(const char* path, int inum) {
   printf("listing dirs\n");
   if (path) inum = tree_lookup(path);
   inode_t* dd = get_inode(inum);
   dirent_t* dir_contents = blocks_get_block(dd->block);
-  slist_t* dir_names = NULL;
+  dirent_node_t* dirents = NULL;
   for (int i = 0; i < TOTAL_DIRENTS; i++) {
     if (dir_contents[i].filled == 1) {
-      dir_names = s_cons(dir_contents[i].name, dir_names);
+      dirent_node_t* tmp = malloc(sizeof(dirent_node_t));
+      tmp->entry = dir_contents[i];
+      if (!dirents) {
+        dirents = tmp;
+        list_init(&dirents->dirent_list);
+      }
+      else list_add_after(&dirents->dirent_list, &tmp->dirent_list);
     }
   }
-  return dir_names;
+  return dirents;
 }
 
 // prints everything inside the passed in directory

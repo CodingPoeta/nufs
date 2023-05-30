@@ -24,7 +24,7 @@
 void storage_init(const char *path);
 
 // get objects stats, returns something other than zero if it doesn't work
-int storage_stat(const char *path, struct stat *st);
+int storage_stat(const char *path, int inum, struct stat *st);
 
 // read data from object into buf starting at an offset
 int storage_read(const char *path, char *buf, size_t size, off_t offset);
@@ -48,7 +48,7 @@ int storage_link(const char *from, const char *to);
 int storage_rename(const char *from, const char *to);
 
 // list objects at path
-slist_t *storage_list(const char *path, int inum);
+dirent_node_t *storage_list(const char *path, int inum);
 
 // retrieve the parent dir of the path, mutates directory
 void get_parent_dir(const char *path, char *directory);
