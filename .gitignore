@@ -1,0 +1,6 @@
+*.o
+nufs
+test.log
+data.nufs
+
+.vscode/
