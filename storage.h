@@ -36,7 +36,7 @@ int storage_write(const char *path, const char *buf, size_t size, off_t offset);
 int storage_truncate(const char *path, off_t size);
 
 // make object at path
-int storage_mknod(const char *path, int mode);
+int storage_mknod(const char *path, const char *name, int pinum, int mode);
 
 // unlink object at path
 int storage_unlink(const char *path);
@@ -51,9 +51,6 @@ int storage_rename(const char *from, const char *to);
 dirent_node_t *storage_list(const char *path, int inum);
 
 // retrieve the parent dir of the path, mutates directory
-void get_parent_dir(const char *path, char *directory);
-
-// get the child of the path
-void get_child(const char *path, char *child);
+void split_path(const char *path, char *directory, char *name);
 
 #endif

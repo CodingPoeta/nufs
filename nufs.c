@@ -91,7 +91,14 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 // function.
 int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
   printf("making object\n");
-  int rv = storage_mknod(path, mode);
+
+  char *directory = malloc(strlen(path) + 1);
+  char *name = malloc(strlen(path) + 1);
+  split_path(path, directory, name);
+  int rv = storage_mknod(directory, name, -1, mode);
+
+  free(directory);
+  free(name);
 
   printf("--------------------\n");
   printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
@@ -105,8 +112,12 @@ int nufs_mkdir(const char *path, mode_t mode) {
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
   char *from_parent = malloc(strlen(path) + 1);
-  get_parent_dir(path, from_parent);
+  char *name = malloc(strlen(path) + 1);
+  split_path(path, from_parent, name);
   int parent_inum = tree_lookup(from_parent);
+  
+  free(from_parent);
+  free(name);
 
   if (rv >= 0) {
     directory_put(node, ".", parent_inum);

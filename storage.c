@@ -156,43 +156,38 @@ int storage_truncate(const char *path, off_t size) {
 }
 
 // make object at path
-int storage_mknod(const char *path, int mode) {
+int storage_mknod(const char *path, const char *name, int pinum, int mode) {
   // make sure it doesn't already exist
-  if (tree_lookup(path) >= 0) {
+  if (path) {
+    pinum = tree_lookup(path);
+  }
+  
+  assert(pinum >= 0);
+  inode_t *directory_node = get_inode(pinum);
+  int inum = directory_lookup(directory_node, name);
+  if (inum >= 0) {
     return -EEXIST;
   }
 
-  int inum = alloc_inode();
+  inum = alloc_inode();
   inode_t *node = get_inode(inum);
   node->refs = 1;
   node->mode = mode;
   node->size = 0;
 
   printf("creating object for inode %d\n", inum);
-  char *directory = malloc(strlen(path) + 1);
-  get_parent_dir(path, directory);
-  int directory_inum = tree_lookup(directory);
-  assert(directory_inum >= 0);
-  inode_t *directory_node = get_inode(directory_inum);
 
-  char *child = malloc(strlen(path) + 1);
-  get_child(path, child);
-
-  directory_put(directory_node, child, inum);
-  printf("mknod(%s, %04o) -> %d\n", path, mode, 0);
+  directory_put(directory_node, name, inum);
+  printf("mknod(%s %s, %04o) -> %d\n", path, name, mode, 0);
 
   return 0;
 }
 
 // unlink object at path
 int storage_unlink(const char *path) {
-  // initialize memory for directory and child
   char *directory = malloc(strlen(path) + 1);
   char *child = malloc(strlen(path) + 1);
-
-  // get directory and child
-  get_parent_dir(path, directory);
-  get_child(path, child);
+  split_path(path, directory, child);
 
   printf("unlinking\n");
 
@@ -229,8 +224,7 @@ int storage_link(const char *from, const char *to) {
   char *to_child = malloc(strlen(to) + 1);
 
   // get parent and child
-  get_parent_dir(to, to_parent);
-  get_child(to, to_child);
+  split_path(to, to_parent, to_child);
 
   printf("linking");
 
@@ -270,7 +264,7 @@ dirent_node_t *storage_list(const char *path, int inum) {
 }
 
 // retrieve the parent dir of the path, mutates directory
-void get_parent_dir(const char *path, char *directory) {
+void split_path(const char *path, char *directory, char *name) {
   strcpy(directory, path);
 
   // start at end of path, iterate until /
@@ -284,29 +278,11 @@ void get_parent_dir(const char *path, char *directory) {
   // add null terminator at end of parent
   if (counter != strlen(path) - 1) {
     directory[strlen(path) - counter - 1] = '\0';
+    strcpy(name, &directory[strlen(path) - counter]);
   }
   // no parent directory, add null terminator
   else {
     directory[1] = '\0';
+    strcpy(name, &path[1]);
   }
-}
-
-// get the child of the path
-void get_child(const char *path, char *child) {
-  // strcpy(child, path);
-
-  // start at end of path, iterate until /
-  int counter = 0;
-  int index = strlen(path) - 1;
-  while (path[index] != '/') {
-    counter++;
-    index--;
-  }
-
-  // get last counter number of element of the path
-  // aka the child
-  // child += strlen(path) - counter;
-  //
-  strcpy(child, path + index + 1);
-  printf("get child became: %s\n", child);
 }
