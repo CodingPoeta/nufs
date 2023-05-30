@@ -264,9 +264,9 @@ int storage_rename(const char *from, const char *to) {
 }
 
 // list objects at path
-slist_t *storage_list(const char *path) {
+slist_t *storage_list(const char *path, int inum) {
   printf("listing\n");
-  return directory_list(path);
+  return directory_list(path, inum);
 }
 
 // retrieve the parent dir of the path, mutates directory

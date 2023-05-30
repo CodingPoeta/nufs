@@ -48,7 +48,7 @@ int storage_link(const char *from, const char *to);
 int storage_rename(const char *from, const char *to);
 
 // list objects at path
-slist_t *storage_list(const char *path);
+slist_t *storage_list(const char *path, int inum);
 
 // retrieve the parent dir of the path, mutates directory
 void get_parent_dir(const char *path, char *directory);

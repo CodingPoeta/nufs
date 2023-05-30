@@ -61,7 +61,7 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   (void)fi;
   int rv = 0;
 
-  slist_t *items = storage_list(path);
+  slist_t *items = storage_list(path, -1);
 
   for (slist_t *xs = items; xs != 0; xs = xs->next) {
     struct stat st;

@@ -40,7 +40,7 @@ int directory_put(inode_t *dd, const char *name, int inum);
 int directory_delete(inode_t *dd, const char *name);
 
 // gets an slist_t struct of each file name at the end of the passed in path
-slist_t *directory_list(const char *path);
+slist_t *directory_list(const char *path, int inum);
 
 // prints everything inside the passed in directory
 void print_directory(inode_t *dd);
