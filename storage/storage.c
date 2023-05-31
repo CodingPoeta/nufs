@@ -188,7 +188,7 @@ int storage_mknod(const char *path, const char *name, int pinum, int mode) {
 }
 
 // unlink object at path
-int storage_unlink(const char *path, const char *name, int pinum) {
+int storage_unlink(const char *path, int pinum, const char *name) {
   printf("unlinking\n");
 
   // get directory inode
@@ -240,7 +240,7 @@ int storage_rename(const char *from_parent, int from_pinum, const char *from_chi
   int from_inum = directory_lookup(from_pnode, from_child);
   
   storage_link(NULL, from_inum, to_parent, to_pinum, to_child);
-  storage_unlink(from_parent, from_child, -1);
+  storage_unlink(from_parent, from_pinum, from_child);
 
   printf("renaming");
   return 0;

@@ -178,7 +178,7 @@ void nufs_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 // unlinks file from this path
 void nufs_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
   printf("----------------start unlink: parent=%ld, name=%s\n", parent, name);
-  int rv = storage_unlink(NULL, name, parent);
+  int rv = storage_unlink(NULL, parent, name);
   fuse_reply_err(req, rv == 0 ? 0 : errno);
   printf("unlink(%s) -> %d\n", name, rv);
 }

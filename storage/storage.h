@@ -39,7 +39,7 @@ int storage_truncate(const char *path, off_t size);
 int storage_mknod(const char *path, const char *name, int pinum, int mode);
 
 // unlink object at path
-int storage_unlink(const char *path, const char *name, int pinum);
+int storage_unlink(const char *path, int pinum, const char *name);
 
 // create link between from and to
 int storage_link(const char *from, int from_inum, const char *to_parent, int to_pinum, const char *to_child);

@@ -134,7 +134,7 @@ int nufs_unlink(const char *path) {
   char *child = malloc(strlen(path) + 1);
   split_path(path, directory, child);
 
-  int rv = storage_unlink(directory, child, -1);
+  int rv = storage_unlink(directory, -1, child);
 
   // free allocated memory
   free(directory);
