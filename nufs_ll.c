@@ -135,6 +135,10 @@ void nufs_mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
   printf("----------------start mknod: parent=%ld, name=%s, mode=%04o\n", parent, name, mode);
   int rv = storage_mknod(NULL, name, parent, mode);
 
+  if (rv < 0) {
+    fuse_reply_err(req, -rv);
+  }
+  nufs_lookup(req, parent, name);
   printf("+ mknod(%s, %04o) -> %d\n", name, mode, rv);
 }
 
@@ -231,6 +235,13 @@ void nufs_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
 		       size_t size, off_t off, struct fuse_file_info *fi) {
   printf("----------------start write: ino=%ld, size=%ld, off=%ld\n", ino, size, off);
   int rv = storage_write(NULL, ino, buf, size, off);
+
+  if (rv >= 0) {
+    fuse_reply_write(req, rv);
+  } else {
+    fuse_reply_err(req, ENOENT);
+  }
+
   printf("write(%ld, %ld bytes, @+%ld) -> %d\n", ino, size, off, rv);
 }
 
