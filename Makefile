@@ -40,5 +40,9 @@ gdb: nufs
 	mkdir -p mnt || true
 	gdb --args ./nufs -s -f mnt data.nufs
 
+gdb_ll: nufs_ll
+	mkdir -p mnt || true
+	gdb --args ./nufs_ll -s -f mnt data.nufs
+
 .PHONY: clean mount unmount gdb
 
