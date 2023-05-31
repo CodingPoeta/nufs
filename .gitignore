@@ -1,5 +1,6 @@
 *.o
 nufs
+nufs_ll
 test.log
 data.nufs
 
