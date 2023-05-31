@@ -147,14 +147,30 @@ void nufs_mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
 void nufs_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		       mode_t mode) {
   printf("----------------start mkdir: parent=%ld, name=%s, mode=%04o\n", parent, name, mode);
-  nufs_mknod(req, parent, name, mode | 040000, 0);
-  
+  int rv = storage_mknod(NULL, name, parent, mode | 040000);
+  if (rv < 0) {
+    fuse_reply_err(req, -rv);
+  }
+
   inode_t *pnode = get_inode(parent);
   int inum = directory_lookup(pnode, name);
   inode_t *node = get_inode(inum);
 
   directory_put(node, ".", inum);
   directory_put(node, "..", parent);
+
+  struct fuse_entry_param e;
+
+  memset(&e, 0, sizeof(e));
+  e.ino = inum;
+  e.attr_timeout = 1.0;
+  e.entry_timeout = 1.0;
+
+  rv = storage_stat(NULL, inum, &e.attr);
+  if (rv < 0) {
+    fuse_reply_err(req, -rv);
+  }
+  fuse_reply_entry(req, &e);
 
   printf("+ mkdir(%s) -> %d\n", name, inum);
 }
@@ -251,6 +267,7 @@ void nufs_ioctl(fuse_req_t req, fuse_ino_t ino, int cmd,
 		       const void *in_buf, size_t in_bufsz, size_t out_bufsz) {
   printf("----------------start ioctl: ino=%ld, cmd=%d\n", ino, cmd);
   int rv = 0;
+  fuse_reply_err(req, EBADR);
   printf("ioctl(%ld, %d, ...) -> %d\n", ino, cmd, rv);
 }
 

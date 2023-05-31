@@ -41,7 +41,7 @@ int alloc_inode() {
   printf("trying to allocate\n");
 
   // find next free space in the inode bitmap
-  for (int i = 0; i < SIZE; i++) {
+  for (int i = ROOT_INODE + 1; i < SIZE; i++) {
     // if inode is free in the bitmap
     if (bitmap_get(ibm, i) == 0) {
       // get free inode
