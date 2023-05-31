@@ -130,7 +130,16 @@ int nufs_mkdir(const char *path, mode_t mode) {
 
 // unlinks file from this path
 int nufs_unlink(const char *path) {
-  int rv = storage_unlink(path);
+  char *directory = malloc(strlen(path) + 1);
+  char *child = malloc(strlen(path) + 1);
+  split_path(path, directory, child);
+
+  int rv = storage_unlink(directory, child, -1);
+
+  // free allocated memory
+  free(directory);
+  free(child);
+
   printf("--------------------\n");
   printf("unlink(%s) -> %d\n", path, rv);
   return rv;
@@ -138,9 +147,19 @@ int nufs_unlink(const char *path) {
 
 // links the files from the to paths
 int nufs_link(const char *from, const char *to) {
-  int rv = storage_link(from, to);
+  char *to_parent = malloc(strlen(to) + 1);
+  char *to_child = malloc(strlen(to) + 1);
+  
+  // get parent and child
+  split_path(to, to_parent, to_child);
+
+  int rv = storage_link(from, -1, to_parent, to_child);
   printf("--------------------\n");
   printf("link(%s => %s) -> %d\n", from, to, rv);
+
+  free(to_parent);
+  free(to_child);
+
   return rv;
 }
 
@@ -163,9 +182,24 @@ int nufs_rmdir(const char *path) {
 // implements: man 2 rename
 // called to move a file within the same filesystem
 int nufs_rename(const char *from, const char *to) {
-  int rv = storage_rename(from, to);
+  char *from_parent = malloc(strlen(from) + 1);
+  char *from_child = malloc(strlen(from) + 1);
+  char *to_parent = malloc(strlen(to) + 1);
+  char *to_child = malloc(strlen(to) + 1);
+
+  // get parent and child
+  split_path(from, from_parent, from_child);
+  split_path(to, to_parent, to_child);
+
+  int rv = storage_rename(from_parent, -1, from_child, to_parent, to_child);
   printf("--------------------\n");
   printf("rename(%s => %s) -> %d\n", from, to, rv);
+
+  free(from_parent);
+  free(from_child);
+  free(to_parent);
+  free(to_child);
+
   return rv;
 }
 
@@ -208,7 +242,7 @@ int nufs_open(const char *path, struct fuse_file_info *fi) {
 // Actually read data
 int nufs_read(const char *path, char *buf, size_t size, off_t offset,
               struct fuse_file_info *fi) {
-  int rv = storage_read(path, buf, size, offset);
+  int rv = storage_read(path, -1, buf, size, offset);
   printf("--------------------\n");
   printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
   return rv;
@@ -217,7 +251,7 @@ int nufs_read(const char *path, char *buf, size_t size, off_t offset,
 // Actually write data
 int nufs_write(const char *path, const char *buf, size_t size, off_t offset,
                struct fuse_file_info *fi) {
-  int rv = storage_write(path, buf, size, offset);
+  int rv = storage_write(path, -1, buf, size, offset);
   printf("--------------------\n");
   printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
   return rv;

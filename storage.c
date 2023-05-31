@@ -32,8 +32,8 @@ int storage_stat(const char *path, int inum, struct stat *st) {
 }
 
 // read data from object into buf starting at an offset
-int storage_read(const char *path, char *buf, size_t size, off_t offset) {
-  int inum = tree_lookup(path);
+int storage_read(const char *path, int inum,  char *buf, size_t size, off_t offset) {
+  if (path) inum = tree_lookup(path);
 
   printf("reading from inode at %d\n", inum);
 
@@ -83,9 +83,9 @@ int storage_read(const char *path, char *buf, size_t size, off_t offset) {
 }
 
 // write from path to buff starting at an offset
-int storage_write(const char *path, const char *buf, size_t size,
+int storage_write(const char *path, int inum, const char *buf, size_t size,
                   off_t offset) {
-  int inum = tree_lookup(path);
+  if (path) inum = tree_lookup(path);
   assert(inum >= 0);
   inode_t *node = get_inode(inum);
 
@@ -184,22 +184,18 @@ int storage_mknod(const char *path, const char *name, int pinum, int mode) {
 }
 
 // unlink object at path
-int storage_unlink(const char *path) {
-  char *directory = malloc(strlen(path) + 1);
-  char *child = malloc(strlen(path) + 1);
-  split_path(path, directory, child);
-
+int storage_unlink(const char *path, const char *name, int pinum) {
   printf("unlinking\n");
 
   // get directory inode
-  int directory_inum = tree_lookup(directory);
-  inode_t *directory_node = get_inode(directory_inum);
+  if (path) pinum = tree_lookup(path);
+  inode_t *directory_node = get_inode(pinum);
 
   // unlink the child from the directory
-  int inum = tree_lookup(path);
+  int inum = directory_lookup(directory_node, name);
   inode_t *node = get_inode(inum);
   node->refs--;
-  int rv = directory_delete(directory_node, child);
+  int rv = directory_delete(directory_node, name);
 
   // free inode
   // int inum = tree_lookup(path);
@@ -207,29 +203,18 @@ int storage_unlink(const char *path) {
     free_inode(inum);
   }
 
-  // free allocated memory
-  free(directory);
-  free(child);
-
   return rv;
 }
 
 // create link between from and to
-int storage_link(const char *from, const char *to) {
+int storage_link(const char *from, int from_inum, const char *to_parent, const char *to_child) {
   // get inum and ensure validity
-  int from_inum = tree_lookup(from);
+  if (from) from_inum = tree_lookup(from);
   assert(from_inum >= 0);
-
-  char *to_parent = malloc(strlen(to) + 1);
-  char *to_child = malloc(strlen(to) + 1);
-
-  // get parent and child
-  split_path(to, to_parent, to_child);
 
   printf("linking");
 
-  int inum = tree_lookup(from);
-  inode_t *node = get_inode(inum);
+  inode_t *node = get_inode(from_inum);
   node->refs++;
 
   // get parent inode
@@ -239,21 +224,21 @@ int storage_link(const char *from, const char *to) {
   // create link
   int rv = directory_put(to_parent_node, to_child, from_inum);
 
-  // free allocated memory
-  free(to_parent);
-  free(to_child);
-
   // return status
   return rv;
 }
 
 // rename from to to
-int storage_rename(const char *from, const char *to) {
-  storage_link(from, to);
-  storage_unlink(from);
+int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, const char *to_child) {
+  if (from_parent) from_pinum = tree_lookup(from_parent);
+
+  inode_t* from_pnode = get_inode(from_pinum);
+  int from_inum = directory_lookup(from_pnode, from_child);
+  
+  storage_link(NULL, from_inum, to_parent, to_child);
+  storage_unlink(from_parent, from_child, -1);
 
   printf("renaming");
-
   return 0;
 }
 

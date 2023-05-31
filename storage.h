@@ -27,10 +27,10 @@ void storage_init(const char *path);
 int storage_stat(const char *path, int inum, struct stat *st);
 
 // read data from object into buf starting at an offset
-int storage_read(const char *path, char *buf, size_t size, off_t offset);
+int storage_read(const char *path, int inum, char *buf, size_t size, off_t offset);
 
 // write from path to buff starting at an offset
-int storage_write(const char *path, const char *buf, size_t size, off_t offset);
+int storage_write(const char *path, int inum, const char *buf, size_t size, off_t offset);
 
 // truncate file to size
 int storage_truncate(const char *path, off_t size);
@@ -39,13 +39,13 @@ int storage_truncate(const char *path, off_t size);
 int storage_mknod(const char *path, const char *name, int pinum, int mode);
 
 // unlink object at path
-int storage_unlink(const char *path);
+int storage_unlink(const char *path, const char *name, int pinum);
 
 // create link between from and to
-int storage_link(const char *from, const char *to);
+int storage_link(const char *from, int from_inum, const char *to_parent, const char *to_child);
 
 // rename from to to
-int storage_rename(const char *from, const char *to);
+int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, const char *to_child);
 
 // list objects at path
 dirent_node_t *storage_list(const char *path, int inum);
