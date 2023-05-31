@@ -265,9 +265,11 @@ int main(int argc, char *argv[]) {
 	fuse_daemonize(opts.foreground);
 
 	/* Block until ctrl+c or fusermount -u */
-	if (opts.singlethread)
+	if (opts.singlethread) {
+    printf("singlethread loop start\n");
 		ret = fuse_session_loop(se);
-	else {
+	} else {
+    printf("multithread loop start\n");
 		config.clone_fd = opts.clone_fd;
 		config.max_idle_threads = opts.max_idle_threads;
 		ret = fuse_session_loop_mt(se, &config);

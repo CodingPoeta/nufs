@@ -57,7 +57,7 @@ int tree_lookup(const char* path) {
 
 // Puts the file and it's inode within the directory
 int directory_put(inode_t* dd, const char* name, int inum) {
-  printf("putting dirs\n");
+  printf("putting dirs: %s\n", name);
   dirent_t* dir_contents = blocks_get_block(dd->block);
 
   for (int i = 0; i < TOTAL_DIRENTS; i++) {
