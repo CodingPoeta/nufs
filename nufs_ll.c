@@ -179,6 +179,7 @@ void nufs_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 void nufs_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
   printf("----------------start unlink: parent=%ld, name=%s\n", parent, name);
   int rv = storage_unlink(NULL, name, parent);
+  fuse_reply_err(req, rv == 0 ? 0 : errno);
   printf("unlink(%s) -> %d\n", name, rv);
 }
 
@@ -187,6 +188,23 @@ void nufs_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		      const char *newname) {
   printf("----------------start link: ino=%ld, newparent=%ld, newname=%s\n", ino, newparent, newname);
   int rv = storage_link(NULL, ino, NULL, newparent, newname);
+  if (rv < 0) {
+    fuse_reply_err(req, -rv);
+  }
+
+  struct fuse_entry_param e;
+
+  memset(&e, 0, sizeof(e));
+  e.ino = ino;
+  e.attr_timeout = 1.0;
+  e.entry_timeout = 1.0;
+
+  rv = storage_stat(NULL, ino, &e.attr);
+  if (rv < 0) {
+    fuse_reply_err(req, -rv);
+  }
+  fuse_reply_entry(req, &e);
+
   printf("+ link(%ld %ld/%s) -> %d\n", ino, newparent, newname, rv);
 }
 
@@ -201,6 +219,7 @@ void nufs_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name) {
 
   if (mode != 040755) {
     printf("+ rmdir(%s) -> %d\n", name, -1);
+    fuse_reply_err(req, ENOTDIR);
     return;
   }
 
@@ -214,6 +233,7 @@ void nufs_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 			unsigned int flags) {
   printf("----------------start rename: parent=%ld, name=%s, newparent=%ld, newname=%s\n", parent, name, newparent, newname);
   int rv = storage_rename(NULL, parent, name, NULL, newparent, newname);
+  fuse_reply_err(req, rv == 0 ? 0 : errno);
   printf("rename(%s => %ld %s) -> %d\n", name, newparent, newname, rv);
 }
 
