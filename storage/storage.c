@@ -207,7 +207,7 @@ int storage_unlink(const char *path, const char *name, int pinum) {
 }
 
 // create link between from and to
-int storage_link(const char *from, int from_inum, const char *to_parent, const char *to_child) {
+int storage_link(const char *from, int from_inum, const char *to_parent, int to_pinum, const char *to_child) {
   // get inum and ensure validity
   if (from) from_inum = tree_lookup(from);
   assert(from_inum >= 0);
@@ -218,8 +218,8 @@ int storage_link(const char *from, int from_inum, const char *to_parent, const c
   node->refs++;
 
   // get parent inode
-  int to_parent_inum = tree_lookup(to_parent);
-  inode_t *to_parent_node = get_inode(to_parent_inum);
+  if (to_parent) to_pinum = tree_lookup(to_parent);
+  inode_t *to_parent_node = get_inode(to_pinum);
 
   // create link
   int rv = directory_put(to_parent_node, to_child, from_inum);
@@ -229,13 +229,13 @@ int storage_link(const char *from, int from_inum, const char *to_parent, const c
 }
 
 // rename from to to
-int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, const char *to_child) {
+int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, int to_pinum, const char *to_child) {
   if (from_parent) from_pinum = tree_lookup(from_parent);
 
   inode_t* from_pnode = get_inode(from_pinum);
   int from_inum = directory_lookup(from_pnode, from_child);
   
-  storage_link(NULL, from_inum, to_parent, to_child);
+  storage_link(NULL, from_inum, to_parent, to_pinum, to_child);
   storage_unlink(from_parent, from_child, -1);
 
   printf("renaming");

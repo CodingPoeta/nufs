@@ -1,12 +1,15 @@
 
-SRCS := $(wildcard *.c)
+SRCS := $(wildcard storage/*.c)
 OBJS := $(SRCS:.c=.o)
-HDRS := $(wildcard *.h)
+HDRS := $(wildcard storage/*.h)
 
 CFLAGS := -g `pkg-config fuse --cflags`
 LDLIBS := `pkg-config fuse --libs`
 
-nufs: $(OBJS)
+nufs: $(OBJS) nufs.o
+	gcc $(CLFAGS) -o $@ $^ $(LDLIBS)
+
+nufs_ll: $(OBJS) nufs_ll.o
 	gcc $(CLFAGS) -o $@ $^ $(LDLIBS)
 
 %.o: %.c $(HDRS)

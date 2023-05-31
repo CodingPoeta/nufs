@@ -10,11 +10,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "directory.h"
-#include "inode.h"
-#include "storage.h"
+#include "storage/directory.h"
+#include "storage/inode.h"
+#include "storage/storage.h"
 
-#define FUSE_USE_VERSION 26
+#define FUSE_USE_VERSION 30
 #include <fuse.h>
 
 // implementation for: man 2 access
@@ -153,7 +153,7 @@ int nufs_link(const char *from, const char *to) {
   // get parent and child
   split_path(to, to_parent, to_child);
 
-  int rv = storage_link(from, -1, to_parent, to_child);
+  int rv = storage_link(from, -1, to_parent, -1, to_child);
   printf("--------------------\n");
   printf("link(%s => %s) -> %d\n", from, to, rv);
 
@@ -191,7 +191,7 @@ int nufs_rename(const char *from, const char *to) {
   split_path(from, from_parent, from_child);
   split_path(to, to_parent, to_child);
 
-  int rv = storage_rename(from_parent, -1, from_child, to_parent, to_child);
+  int rv = storage_rename(from_parent, -1, from_child, to_parent, -1, to_child);
   printf("--------------------\n");
   printf("rename(%s => %s) -> %d\n", from, to, rv);
 

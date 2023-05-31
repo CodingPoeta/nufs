@@ -42,10 +42,10 @@ int storage_mknod(const char *path, const char *name, int pinum, int mode);
 int storage_unlink(const char *path, const char *name, int pinum);
 
 // create link between from and to
-int storage_link(const char *from, int from_inum, const char *to_parent, const char *to_child);
+int storage_link(const char *from, int from_inum, const char *to_parent, int to_pinum, const char *to_child);
 
 // rename from to to
-int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, const char *to_child);
+int storage_rename(const char *from_parent, int from_pinum, const char *from_child, const char *to_parent, int to_pinum, const char *to_child);
 
 // list objects at path
 dirent_node_t *storage_list(const char *path, int inum);
