@@ -12,6 +12,8 @@
 #include "bitmap.h"
 #include "blocks.h"
 
+#define ROOT_INODE 1
+
 typedef struct inode {
   int refs;   // reference count
   int mode;   // permission & type

@@ -3,7 +3,14 @@
 
 // Initializes the root node directory
 void directory_init() {
-  int i = alloc_inode();
+  int i = ROOT_INODE;
+  void *ibm = get_inode_bitmap();
+  if (bitmap_get(ibm, i) == 1) {
+    printf("root inode already exists\n");
+    return;
+  }
+  bitmap_put(ibm, i, 1);
+
   inode_t* new_dir_inode = get_inode(i);
 
   printf("intializing dir\n");
@@ -35,7 +42,7 @@ int directory_lookup(inode_t* dd, const char* name) {
 int tree_lookup(const char* path) {
   slist_t* file_path = s_explode(path, '/');
   slist_t* curr_file = file_path;
-  int inode_num = 0;
+  int inode_num = ROOT_INODE;
   inode_t* root_inode = get_inode(inode_num);
 
   printf("tree_lookup path: %s\n", path);
