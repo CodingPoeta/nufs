@@ -205,7 +205,7 @@ void nufs_open(fuse_req_t req, fuse_ino_t ino,
 		      struct fuse_file_info *fi) {
   printf("----------------start open: ino=%ld\n", ino);
   inode_t *node = get_inode(ino);
-  if (node) fuse_reply_err(req, 0);
+  if (!node) fuse_reply_err(req, 0);
   else fuse_reply_open(req, fi);
 
   printf("open(%ld)\n", ino);
@@ -217,7 +217,7 @@ void nufs_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   printf("----------------start read: ino=%ld, size=%ld, off=%ld\n", ino, size, off);
   char* buf = malloc(size);
   int rv = storage_read(NULL, ino, buf, size, off);
-  if (rv == 0) {
+  if (rv > 0) {
     fuse_reply_buf(req, buf, size);
     // fuse_reply_data(req, &buf, FUSE_BUF_SPLICE_MOVE);
   } else {
