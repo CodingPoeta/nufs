@@ -23,10 +23,14 @@ int storage_stat(const char *path, int inum, struct stat *st) {
 
   // fill out stat struct
   memset(st, 0, sizeof(stat));
+  st->st_ino = inum;
   st->st_uid = getuid();
   st->st_mode = node->mode;
-  st->st_size = node->size;
   st->st_nlink = node->refs;
+
+  if (S_ISREG(node->mode)) {
+    st->st_size = node->size;
+  }
 
   return 0;
 }

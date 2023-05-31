@@ -17,67 +17,113 @@
 #define FUSE_USE_VERSION 34
 #include <fuse3/fuse_lowlevel.h>
 
+void nufs_lookup(fuse_req_t req, fuse_ino_t parent, const char *name){
+  printf("----------------start lookup: ino=%ld, name=%s\n", parent, name);
+  struct fuse_entry_param e;
+
+  inode_t *pnode = get_inode(parent);
+  int ino = directory_lookup(pnode, name);
+  if (ino < 0) {
+    fuse_reply_err(req, ENOENT);
+    return;
+  }
+
+  inode_t *node = get_inode(ino);
+  memset(&e, 0, sizeof(e));
+  e.ino = ino;
+  e.attr_timeout = 1.0;
+  e.entry_timeout = 1.0;
+  int rv = storage_stat(NULL, ino, &e.attr);
+  assert(rv == 0);
+
+  fuse_reply_entry(req, &e);
+  printf("+ lookup(%ld, %s) -> %d\n", parent, name, ino);
+}
+
 // implementation for: man 2 access
 // Checks if a file exists.
 void nufs_access(fuse_req_t req, fuse_ino_t ino, int mask) {
+  printf("----------------start access: ino=%ld, mask=%04o\n", ino, mask);
   inode_t *node = get_inode(ino);
 
-  printf("--------------------\n");
-  printf("access(%ld, %04o) -> \n", ino, mask);
   if (node) fuse_reply_err(req, 0);
   else fuse_reply_err(req, ENOENT);
+  printf("+ access(%ld, %04o) -> \n", ino, mask);
 }
 
 // Gets an object's attributes (type, permissions, size, etc).
 // Implementation for: man 2 stat
 // This is a crucial function.
 void nufs_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
+  printf("----------------start getattr: ino=%ld\n", ino);
   printf("getting stats of inode at %ld\n", ino);
 
   // get inode with inum
   inode_t *node = get_inode(ino);
+  if (node == NULL) {
+    fuse_reply_err(req, ENOENT);
+    printf("inode %ld not found\n", ino);
+    return;
+  }
 
-  struct stat* st = malloc(sizeof(struct stat));
-  // fill out stat struct
-  memset(st, 0, sizeof(stat));
-  st->st_uid = getuid();
-  st->st_mode = node->mode;
-  st->st_size = node->size;
-  st->st_nlink = node->refs;
+  struct stat st;
+  int rv = storage_stat(NULL, ino, &st);
+  assert(rv == 0);
 
-  printf("--------------------\n");
-  printf("getting attr\n");
-  fuse_reply_attr(req, st, 1.0);
+  fuse_reply_attr(req, &st, 1.0);
+  printf("+ getting attr\n");
 }
 
 // implementation for: man 2 readdir
 // lists the contents of a directory
 void nufs_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 			 struct fuse_file_info *fi) {
+  printf("----------------start readdir: ino=%ld, size=%ld, off=%ld\n", ino, size, off);
   int rv = 0;
   dirent_node_t *items = storage_list(NULL, ino);
   int flag = 0;
 
+  char *buf;
+  char *pbuf;
+	size_t rem = size+off;
+  off_t next_off = 0;
+	buf = calloc(1, rem);
+  if (!buf) {
+    fuse_reply_err(req, ENOMEM);
+    return;
+  }
+  pbuf = buf;
+
   for (dirent_node_t *xs = items; xs != 0;) {
+    size_t entsize;
     struct stat st;
     printf("current item: %s\n", xs->entry.name);
 
     rv = storage_stat(NULL, xs->entry.inum, &st);
     assert(rv == 0);
-    fuse_add_direntry(req, NULL, 0, xs->entry.name, &st, (off_t)0);
+    next_off += fuse_add_direntry(req, NULL, 0,  xs->entry.name, NULL, 0);
+    entsize = fuse_add_direntry(req, pbuf, rem, xs->entry.name, &st, next_off);
 
     dirent_node_t *to_del = xs;
     xs = to_struct((list_next(&xs->dirent_list)), dirent_node_t, dirent_list);
     list_del(&to_del->dirent_list);
     free(to_del);
 
+
+    pbuf += entsize;
+    rem -= entsize;
     if (to_del == xs) {
       break;
     }
   }
+  if (next_off == off) {
+    fuse_reply_buf(req, NULL, 0);
+  } else {
+    fuse_reply_buf(req, buf+off, next_off-off);
+  }
+  free(buf);
 
-  printf("--------------------\n");
-  printf("readdir(%ld) -> %d\n", ino, rv);
+  printf("+ readdir(%ld) -> %d\n", ino, rv);
 }
 
 // mknod makes a filesystem object like a file or directory
@@ -86,17 +132,17 @@ void nufs_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 // function.
 void nufs_mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
 		       mode_t mode, dev_t rdev) {
-  printf("making object\n");
+  printf("----------------start mknod: parent=%ld, name=%s, mode=%04o\n", parent, name, mode);
   int rv = storage_mknod(NULL, name, parent, mode);
 
-  printf("--------------------\n");
-  printf("mknod(%s, %04o) -> %d\n", name, mode, rv);
+  printf("+ mknod(%s, %04o) -> %d\n", name, mode, rv);
 }
 
 // most of the following callbacks implement
 // another system call; see section 2 of the manual
 void nufs_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
 		       mode_t mode) {
+  printf("----------------start mkdir: parent=%ld, name=%s, mode=%04o\n", parent, name, mode);
   nufs_mknod(req, parent, name, mode | 040000, 0);
   
   inode_t *pnode = get_inode(parent);
@@ -106,38 +152,35 @@ void nufs_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
   directory_put(node, ".", inum);
   directory_put(node, "..", parent);
 
-  printf("making dir\n");
-
-  printf("--------------------\n");
-  printf("mkdir(%s) -> %d\n", name, inum);
+  printf("+ mkdir(%s) -> %d\n", name, inum);
 }
 
 // unlinks file from this path
 void nufs_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
+  printf("----------------start unlink: parent=%ld, name=%s\n", parent, name);
   int rv = storage_unlink(NULL, name, parent);
-  printf("--------------------\n");
   printf("unlink(%s) -> %d\n", name, rv);
 }
 
 // links the files from the to paths
 void nufs_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t newparent,
 		      const char *newname) {
+  printf("----------------start link: ino=%ld, newparent=%ld, newname=%s\n", ino, newparent, newname);
   int rv = storage_link(NULL, ino, NULL, newparent, newname);
-  printf("--------------------\n");
-  printf("link(%ld %ld/%s) -> %d\n", ino, newparent, newname, rv);
+  printf("+ link(%ld %ld/%s) -> %d\n", ino, newparent, newname, rv);
 }
 
 // removes the directory from that path
 void nufs_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name) {
+  printf("----------------start rmdir: parent=%ld, name=%s\n", parent, name);
   inode_t *pnode = get_inode(parent);
   int inum = directory_lookup(pnode, name);
   inode_t *node = get_inode(inum);
 
   int mode = node->mode;
 
-  printf("--------------------\n");
   if (mode != 040755) {
-    printf("rmdir(%s) -> %d\n", name, -1);
+    printf("+ rmdir(%s) -> %d\n", name, -1);
     return;
   }
 
@@ -149,8 +192,8 @@ void nufs_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name) {
 void nufs_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 			fuse_ino_t newparent, const char *newname,
 			unsigned int flags) {
+  printf("----------------start rename: parent=%ld, name=%s, newparent=%ld, newname=%s\n", parent, name, newparent, newname);
   int rv = storage_rename(NULL, parent, name, NULL, newparent, newname);
-  printf("--------------------\n");
   printf("rename(%s => %ld %s) -> %d\n", name, newparent, newname, rv);
 }
 
@@ -160,17 +203,18 @@ void nufs_rename(fuse_req_t req, fuse_ino_t parent, const char *name,
 // You can just check whether the file is accessible.
 void nufs_open(fuse_req_t req, fuse_ino_t ino,
 		      struct fuse_file_info *fi) {
+  printf("----------------start open: ino=%ld\n", ino);
   inode_t *node = get_inode(ino);
   if (node) fuse_reply_err(req, 0);
   else fuse_reply_open(req, fi);
 
-  printf("--------------------\n");
   printf("open(%ld)\n", ino);
 }
 
 // Actually read data
 void nufs_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
 		      struct fuse_file_info *fi) {
+  printf("----------------start read: ino=%ld, size=%ld, off=%ld\n", ino, size, off);
   char* buf = malloc(size);
   int rv = storage_read(NULL, ino, buf, size, off);
   if (rv == 0) {
@@ -179,15 +223,14 @@ void nufs_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   } else {
     fuse_reply_err(req, ENOENT);
   }
-  printf("--------------------\n");
   printf("read(%ld, %ld bytes, @+%ld) -> %d\n", ino, size, off, rv);
 }
 
 // Actually write data
 void nufs_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
 		       size_t size, off_t off, struct fuse_file_info *fi) {
+  printf("----------------start write: ino=%ld, size=%ld, off=%ld\n", ino, size, off);
   int rv = storage_write(NULL, ino, buf, size, off);
-  printf("--------------------\n");
   printf("write(%ld, %ld bytes, @+%ld) -> %d\n", ino, size, off, rv);
 }
 
@@ -195,12 +238,13 @@ void nufs_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
 void nufs_ioctl(fuse_req_t req, fuse_ino_t ino, int cmd,
 		       void *arg, struct fuse_file_info *fi, unsigned flags,
 		       const void *in_buf, size_t in_bufsz, size_t out_bufsz) {
+  printf("----------------start ioctl: ino=%ld, cmd=%d\n", ino, cmd);
   int rv = 0;
-  printf("--------------------\n");
   printf("ioctl(%ld, %d, ...) -> %d\n", ino, cmd, rv);
 }
 
 static const struct fuse_lowlevel_ops nufs_ops = {
+  .lookup = nufs_lookup,
   .access = nufs_access,
   .getattr = nufs_getattr,
   .readdir = nufs_readdir,

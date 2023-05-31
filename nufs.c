@@ -20,6 +20,7 @@
 // implementation for: man 2 access
 // Checks if a file exists.
 int nufs_access(const char *path, int mask) {
+  printf("----------------start access----------------\n");
   int inum = tree_lookup(path);
 
   if (inum == -1) {
@@ -28,7 +29,6 @@ int nufs_access(const char *path, int mask) {
 
   inode_t *node = get_inode(inum);
 
-  printf("--------------------\n");
   printf("access(%s, %04o) -> \n", path, mask);
   if (node) {
     return 0;
@@ -41,12 +41,12 @@ int nufs_access(const char *path, int mask) {
 // Implementation for: man 2 stat
 // This is a crucial function.
 int nufs_getattr(const char *path, struct stat *st) {
+  printf("----------------start getattr----------------\n");
   int rv = storage_stat(path, -1, st);
 
   if (rv < 0) {
     return -ENOENT;
   }
-  printf("--------------------\n");
   printf("getting attr\n");
   return rv;
 }
@@ -55,6 +55,7 @@ int nufs_getattr(const char *path, struct stat *st) {
 // lists the contents of a directory
 int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                  off_t offset, struct fuse_file_info *fi) {
+  printf("----------------start readdir----------------\n");
   int rv = 0;
   dirent_node_t *items = storage_list(path, -1);
   int flag = 0;
@@ -79,9 +80,7 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
   // filler(buf, "hello.txt", &st, 0);
 
-  printf("--------------------\n");
   printf("readdir(%s) -> %d\n", path, rv);
-
   return 0;
 }
 
@@ -90,7 +89,7 @@ int nufs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 // Note, for this assignment, you can alternatively implement the create
 // function.
 int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
-  printf("making object\n");
+  printf("----------------start mknod----------------\n");
 
   char *directory = malloc(strlen(path) + 1);
   char *name = malloc(strlen(path) + 1);
@@ -100,7 +99,6 @@ int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
   free(directory);
   free(name);
 
-  printf("--------------------\n");
   printf("mknod(%s, %04o) -> %d\n", path, mode, rv);
   return rv;
 }
@@ -108,6 +106,8 @@ int nufs_mknod(const char *path, mode_t mode, dev_t rdev) {
 // most of the following callbacks implement
 // another system call; see section 2 of the manual
 int nufs_mkdir(const char *path, mode_t mode) {
+  printf("----------------start mkdir----------------\n");
+
   int rv = nufs_mknod(path, mode | 040000, 0);
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
@@ -121,15 +121,15 @@ int nufs_mkdir(const char *path, mode_t mode) {
     directory_put(node, ".", inum);
     directory_put(node, "..", parent_inum);
   }
-  printf("making dir\n");
 
-  printf("--------------------\n");
   printf("mkdir(%s) -> %d\n", path, rv);
   return rv;
 }
 
 // unlinks file from this path
 int nufs_unlink(const char *path) {
+  printf("----------------start unlink----------------\n");
+
   char *directory = malloc(strlen(path) + 1);
   char *child = malloc(strlen(path) + 1);
   split_path(path, directory, child);
@@ -140,13 +140,14 @@ int nufs_unlink(const char *path) {
   free(directory);
   free(child);
 
-  printf("--------------------\n");
   printf("unlink(%s) -> %d\n", path, rv);
   return rv;
 }
 
 // links the files from the to paths
 int nufs_link(const char *from, const char *to) {
+  printf("----------------start link----------------\n");
+
   char *to_parent = malloc(strlen(to) + 1);
   char *to_child = malloc(strlen(to) + 1);
   
@@ -154,7 +155,6 @@ int nufs_link(const char *from, const char *to) {
   split_path(to, to_parent, to_child);
 
   int rv = storage_link(from, -1, to_parent, -1, to_child);
-  printf("--------------------\n");
   printf("link(%s => %s) -> %d\n", from, to, rv);
 
   free(to_parent);
@@ -165,12 +165,13 @@ int nufs_link(const char *from, const char *to) {
 
 // removes the directory from that path
 int nufs_rmdir(const char *path) {
+  printf("----------------start rmdir----------------\n");
+
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
 
   int mode = node->mode;
 
-  printf("--------------------\n");
   if (mode != 040755) {
     printf("rmdir(%s) -> %d\n", path, -1);
     return -1;
@@ -182,6 +183,8 @@ int nufs_rmdir(const char *path) {
 // implements: man 2 rename
 // called to move a file within the same filesystem
 int nufs_rename(const char *from, const char *to) {
+  printf("----------------start rename----------------\n");
+
   char *from_parent = malloc(strlen(from) + 1);
   char *from_child = malloc(strlen(from) + 1);
   char *to_parent = malloc(strlen(to) + 1);
@@ -192,7 +195,6 @@ int nufs_rename(const char *from, const char *to) {
   split_path(to, to_parent, to_child);
 
   int rv = storage_rename(from_parent, -1, from_child, to_parent, -1, to_child);
-  printf("--------------------\n");
   printf("rename(%s => %s) -> %d\n", from, to, rv);
 
   free(from_parent);
@@ -205,6 +207,8 @@ int nufs_rename(const char *from, const char *to) {
 
 // changes permissions
 int nufs_chmod(const char *path, mode_t mode) {
+  printf("----------------start chmod----------------\n");
+
   int rv = -1;
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
@@ -215,15 +219,14 @@ int nufs_chmod(const char *path, mode_t mode) {
     node->mode = mode;
     rv = 0;
   }
-  printf("--------------------\n");
   printf("chmod(%s, %04o) -> %d\n", path, mode, rv);
   return rv;
 }
 
 // truncates file/dir by the passed in size
 int nufs_truncate(const char *path, off_t size) {
+  printf("----------------start truncate----------------\n");
   int rv = storage_truncate(path, size);
-  printf("--------------------\n");
   printf("truncate(%s, %ld bytes) -> %d\n", path, size, rv);
   return rv;
 }
@@ -233,8 +236,8 @@ int nufs_truncate(const char *path, off_t size) {
 // open files.
 // You can just check whether the file is accessible.
 int nufs_open(const char *path, struct fuse_file_info *fi) {
+  printf("----------------start open----------------\n");
   int rv = nufs_access(path, 0);
-  printf("--------------------\n");
   printf("open(%s) -> %d\n", path, rv);
   return rv;
 }
@@ -242,8 +245,8 @@ int nufs_open(const char *path, struct fuse_file_info *fi) {
 // Actually read data
 int nufs_read(const char *path, char *buf, size_t size, off_t offset,
               struct fuse_file_info *fi) {
+  printf("----------------start read----------------\n");
   int rv = storage_read(path, -1, buf, size, offset);
-  printf("--------------------\n");
   printf("read(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
   return rv;
 }
@@ -251,14 +254,15 @@ int nufs_read(const char *path, char *buf, size_t size, off_t offset,
 // Actually write data
 int nufs_write(const char *path, const char *buf, size_t size, off_t offset,
                struct fuse_file_info *fi) {
+  printf("----------------start write----------------\n");
   int rv = storage_write(path, -1, buf, size, offset);
-  printf("--------------------\n");
   printf("write(%s, %ld bytes, @+%ld) -> %d\n", path, size, offset, rv);
   return rv;
 }
 
 // Update the timestamps on a file or directory.
 int nufs_utimens(const char *path, const struct timespec ts[2]) {
+  printf("----------------start utimens----------------\n");
   int inum = tree_lookup(path);
   inode_t *node = get_inode(inum);
   time_t time = ts->tv_sec;
@@ -266,7 +270,6 @@ int nufs_utimens(const char *path, const struct timespec ts[2]) {
   if (node == NULL) {
     return -1;
   }
-  printf("--------------------\n");
   printf("utimens(%s, [%ld, %ld; %ld, %ld]) -> %d\n", path, ts[0].tv_sec,
          ts[0].tv_nsec, ts[1].tv_sec, ts[1].tv_nsec, 1);
   return 0;
@@ -275,8 +278,8 @@ int nufs_utimens(const char *path, const struct timespec ts[2]) {
 // Extended operations
 int nufs_ioctl(const char *path, int cmd, void *arg, struct fuse_file_info *fi,
                unsigned int flags, void *data) {
+  printf("----------------start ioctl----------------\n");
   int rv = 0;
-  printf("--------------------\n");
   printf("ioctl(%s, %d, ...) -> %d\n", path, cmd, rv);
   return rv;
 }

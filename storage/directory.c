@@ -14,10 +14,15 @@ void directory_init() {
   inode_t* new_dir_inode = get_inode(i);
 
   printf("intializing dir\n");
-
+  
+  memset(new_dir_inode, 0, sizeof(inode_t));
   new_dir_inode->mode = 040755;
   new_dir_inode->refs = 1;
   new_dir_inode->size = 0;
+  new_dir_inode->block = alloc_block();
+  new_dir_inode->next_inode = -1;
+  new_dir_inode->atime = time(NULL);
+  new_dir_inode->mtime = time(NULL);
 
   directory_put(new_dir_inode, ".", i);
   directory_put(new_dir_inode, "..", i);
@@ -51,7 +56,7 @@ int tree_lookup(const char* path) {
     if (strcmp(curr_file->data, "") != 0) {
       inode_t* node = get_inode(inode_num);
       inode_num = directory_lookup(node, curr_file->data);
-      if (inode_num == -1) {
+      if (inode_num < 0) {
         return -1;
       }
     }
