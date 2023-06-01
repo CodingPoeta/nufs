@@ -74,6 +74,23 @@ void nufs_getattr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info *fi) {
   printf("+ getting attr\n");
 }
 
+void nufs_setattr (fuse_req_t req, fuse_ino_t ino, struct stat *attr,
+			 int to_set, struct fuse_file_info *fi) {
+  printf("----------------start setattr: ino=%ld\n", ino);
+
+  inode_t *node = get_inode(ino);
+  if (node == NULL) {
+    fuse_reply_err(req, ENOENT);
+    printf("inode %ld not found\n", ino);
+    return;
+  }
+
+  struct stat st;
+  int rv = storage_stat(NULL, ino, &st);
+  assert(rv == 0);
+
+  fuse_reply_attr(req, &st, 1.0);}
+
 // implementation for: man 2 readdir
 // lists the contents of a directory
 void nufs_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
@@ -263,6 +280,7 @@ void nufs_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
   } else {
     fuse_reply_err(req, ENOENT);
   }
+  free(buf);
   printf("read(%ld, %ld bytes, @+%ld) -> %d\n", ino, size, off, rv);
 }
 
@@ -295,6 +313,7 @@ static const struct fuse_lowlevel_ops nufs_ops = {
   .lookup = nufs_lookup,
   .access = nufs_access,
   .getattr = nufs_getattr,
+  .setattr = nufs_setattr,
   .readdir = nufs_readdir,
   .mknod = nufs_mknod,
   // .create   = nufs_create, // alternative to mknod
